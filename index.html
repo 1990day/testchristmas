@@ -56,6 +56,17 @@
             display: flex;
             justify-content: space-between;
         }
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -140,8 +151,13 @@
 
         // 섹션 전환
         function goToSection(sectionId) {
-            document.querySelectorAll("#app > div").forEach(section => section.classList.add("hidden"));
-            document.getElementById(sectionId).classList.remove("hidden");
+            document.querySelectorAll("#app > div").forEach(section => {
+                section.classList.add("hidden");
+                section.classList.remove("fade-in");
+            });
+            const targetSection = document.getElementById(sectionId);
+            targetSection.classList.remove("hidden");
+            targetSection.classList.add("fade-in");
         }
 
         // 사용자 정보 저장
@@ -154,8 +170,10 @@
                 return;
             }
 
-            userId = `${name}-${Date.now()}`;
-            database.ref('rooms/' + userId).set({
+            const roomRef = database.ref('rooms').push();
+            userId = roomRef.key;
+
+            roomRef.set({
                 name: name,
                 password: password
             });
@@ -182,7 +200,7 @@
                 background: selectedBackground
             });
 
-            const uniqueLink = `${window.location.origin}/?room=${userId}`;
+            const uniqueLink = `${window.location.origin}/#room=${userId}`;
             document.getElementById('unique-link').href = uniqueLink;
             document.getElementById('unique-link').textContent = uniqueLink;
 
@@ -238,7 +256,7 @@
                     noteElement.innerHTML = `
                         <div class="note-options">
                             <span>${note.content}</span>
-                            <button onclick="deleteNote('${childSnapshot.key}')">삭제</button>
+                            ${userId ? `<button onclick="deleteNote('${childSnapshot.key}')">삭제</button>` : ''}
                         </div>`;
                     notesContainer.appendChild(noteElement);
                 });
@@ -262,9 +280,9 @@
         }
 
         // 고유 링크로 방 접속
-        const params = new URLSearchParams(window.location.search);
-        const roomParam = params.get("room");
-        if (roomParam) {
+        const hash = window.location.hash;
+        if (hash) {
+            const roomParam = hash.replace('#room=', '');
             database.ref('rooms/' + roomParam).once('value').then((snapshot) => {
                 const roomData = snapshot.val();
                 if (roomData) {
